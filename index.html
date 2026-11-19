@@ -110,9 +110,9 @@
 <script>
   // === FEST EINGETRAGENE KONFIGURATION ===
   const GITHUB_OWNER  = "AnsgorSW";
-  const GITHUB_REPO   = "SlateSMP-Reports";
+  const GITHUB_REPO   = "report";
   const GITHUB_BRANCH = "main";
-  const GITHUB_TOKEN  = "DEIN_GITHUB_TOKEN_HIER";
+  const GITHUB_TOKEN  = "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";
   // =======================================
 
   let currentUser = null;
@@ -133,7 +133,8 @@
     err.textContent = "";
 
     try {
-      const res = await fetch(`users.json?t=${Date.now()}`);
+      const res = await fetch("users.json?t=" + Date.now());
+      if (!res.ok) throw new Error("users.json nicht gefunden");
       const users = await res.json();
       const found = users.find(x => x.username.toLowerCase() === u.toLowerCase() && x.password === p);
 
@@ -144,8 +145,8 @@
       currentUser = { username: found.username, role: found.role };
       sessionStorage.setItem("slatesmp_user", JSON.stringify(currentUser));
       initApp();
-    } catch {
-      err.textContent = "Fehler beim Laden von users.json.";
+    } catch (e) {
+      err.textContent = "Fehler: " + e.message;
     }
   }
 
@@ -162,12 +163,12 @@
     document.getElementById("displayUser").textContent = currentUser.username;
     const roleBadge = document.getElementById("displayRole");
     roleBadge.textContent = currentUser.role;
-    roleBadge.className = `badge ${currentUser.role}`;
+    roleBadge.className = "badge " + currentUser.role;
 
     if (currentUser.role === "team") {
       document.getElementById("teamPanel").classList.remove("hidden");
       try {
-        const rulesRes = await fetch(`rules.txt?t=${Date.now()}`);
+        const rulesRes = await fetch("rules.txt?t=" + Date.now());
         serverRules = await rulesRes.text();
       } catch {
         serverRules = "";
@@ -215,7 +216,7 @@ ${incident}`;
 
     const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/reports.json`;
     const headers = {
-      "Authorization": `Bearer ${GITHUB_TOKEN}`,
+      "Authorization": "Bearer " + GITHUB_TOKEN,
       "Accept": "application/vnd.github+json"
     };
 
@@ -265,7 +266,7 @@ ${incident}`;
 
   async function loadReports() {
     try {
-      const res = await fetch(`reports.json?t=${Date.now()}`);
+      const res = await fetch("reports.json?t=" + Date.now());
       const reports = await res.json();
       renderReports(reports);
     } catch {
@@ -303,14 +304,10 @@ ${incident}`;
 
   function esc(s) {
     if (!s) return "";
-    return String(s)
-      .split("&").join("&")
-      .split("<").join("<")
-      .split(">").join(">")
-      .split('"').join(""")
-      .split("'").join("'");
+    const d = document.createElement("div");
+    d.textContent = String(s);
+    return d.innerHTML;
   }
-
 </script>
 </body>
 </html>
