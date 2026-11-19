@@ -301,13 +301,16 @@ ${incident}`;
     `).join("");
   }
 
-  ```javascript
   function esc(s) {
-    return s ? String(s).replace(/[&<>"']/g, m => ({ '&': '&', '<': '<', '>': '>', '"': '"', "'": ''' }[m])) : "";
+    if (!s) return "";
+    return String(s)
+      .split("&").join("&")
+      .split("<").join("<")
+      .split(">").join(">")
+      .split('"').join(""")
+      .split("'").join("'");
   }
-```[cite: 3]
 
-Danach auf GitHub speichern/committen, kurz warten bis GitHub Pages neu gebaut hat, und mit `Strg + F5` neu laden.
 </script>
 </body>
 </html>
