@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SlateSMP Reports</title>
+  <style>
+    :root {
+      --bg: #0b0d10;
+      --card: #14181f;
+      --border: #262c38;
+      --accent: #e11d48;
+      --accent-hover: #be123c;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --green: #10b981;
+    }
+    * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); padding: 20px; }
+    .container { max-width: 1000px; margin: 0 auto; }
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 15px; margin-bottom: 25px; }
+    h1 { margin: 0; font-size: 1.5rem; letter-spacing: 1px; }
+    h1 span { color: var(--accent); }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+    input, textarea { width: 100%; background: #0b0d10; border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 6px; margin-top: 5px; margin-bottom: 15px; font-size: 0.95rem; }
+    textarea { min-height: 90px; resize: vertical; }
+    button { background: var(--accent); color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    button:hover { background: var(--accent-hover); }
+    button.secondary { background: #262c38; }
+    button.secondary:hover { background: #374151; }
+    button.success { background: var(--green); color: #052e16; }
+    .badge { padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
+    .badge.team { background: rgba(225, 29, 72, 0.2); color: #fb7185; border: 1px solid var(--accent); }
+    .badge.user { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid #3b82f6; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .report-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 12px; }
+    .meta { font-size: 0.85rem; color: var(--muted); }
+    details { background: #0b0d10; padding: 10px; border-radius: 6px; border: 1px solid var(--border); margin-top: 10px; }
+    summary { cursor: pointer; font-weight: 600; color: var(--muted); }
+    pre { white-space: pre-wrap; font-size: 0.85rem; color: #d1d5db; margin-top: 10px; }
+    .hidden { display: none !important; }
+    .verdict-box { background: rgba(16, 185, 129, 0.08); border-left: 3px solid var(--green); padding: 12px; margin: 10px 0; border-radius: 0 6px 6px 0; }
+    a { color: #60a5fa; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>SLATESMP <span>REPORTS</span></h1>
+    <div id="userInfo" class="hidden">
+      <span id="displayUser"></span>
+      <span id="displayRole" class="badge"></span>
+      <button class="secondary" style="margin-left: 10px; padding: 6px 12px;" onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <div id="loginBox" class="card" style="max-width: 400px; margin: 60px auto;">
+    <h2 style="margin-top:0;">Login</h2>
+    <label>Username</label>
+    <input type="text" id="loginUser" placeholder="Minecraft Name">
+    <label>Passwort</label>
+    <input type="password" id="loginPass" placeholder="••••••••">
+    <button style="width:100%;" onclick="login()">Anmelden</button>
+    <p id="loginError" style="color: #fb7185; font-size: 0.9rem; margin-bottom: 0;"></p>
+  </div>
+
+  <div id="appBox" class="hidden">
+    <div id="teamPanel" class="card hidden">
+      <h2 style="margin-top:0;">Neuen Fall anlegen (Team)</h2>
+
+      <div class="grid-2">
+        <div>
+          <label>Beschuldigter Spieler</label>
+          <input type="text" id="accused" placeholder="z.B. SpielerXY">
+        </div>
+        <div>
+          <label>Genutztes KI-Modell</label>
+          <input type="text" id="aiModel" placeholder="z.B. GPT-4o, Claude Sonnet, Gemini">
+        </div>
+      </div>
+
+      <label>Was ist passiert?</label>
+      <textarea id="incident" placeholder="Beschreibung des Vorfalls..."></textarea>
+
+      <div style="margin-bottom: 15px;">
+        <button type="button" class="secondary" onclick="generateAndCopyPrompt()">1. KI-Richter Prompt generieren & kopieren</button>
+        <span id="copyStatus" style="margin-left: 10px; color: var(--green); font-size: 0.9rem;"></span>
+      </div>
+
+      <label>Generierter Prompt</label>
+      <textarea id="generatedPrompt" readonly placeholder="Auf 'Prompt generieren & kopieren' klicken..."></textarea>
+
+      <label>Antwort der KI</label>
+      <textarea id="aiResponse" placeholder="Antwort der KI einfügen..."></textarea>
+
+      <label>Beweisvideo-Link</label>
+      <input type="url" id="proofLink" placeholder="https://...">
+
+      <button class="success" onclick="saveReport()">2. Speichern</button>
+      <span id="saveStatus" style="margin-left: 12px; font-size: 0.9rem;"></span>
+    </div>
+
+    <h2>Vergangene Reports</h2>
+    <div id="reportsList">Lade Reports...</div>
+  </div>
+</div>
+
+<script>
+  // === FEST EINGETRAGENE KONFIGURATION ===
+  const GITHUB_OWNER  = "AnsgorSW";
+  const GITHUB_REPO   = "SlateSMP-Reports";
+  const GITHUB_BRANCH = "main";
+  const GITHUB_TOKEN  = "DEIN_GITHUB_TOKEN_HIER";
+  // =======================================
+
+  let currentUser = null;
+  let serverRules = "";
+
+  window.onload = () => {
+    const saved = sessionStorage.getItem("slatesmp_user");
+    if (saved) {
+      currentUser = JSON.parse(saved);
+      initApp();
+    }
+  };
+
+  async function login() {
+    const u = document.getElementById("loginUser").value.trim();
+    const p = document.getElementById("loginPass").value;
+    const err = document.getElementById("loginError");
+    err.textContent = "";
+
+    try {
+      const res = await fetch(`users.json?t=${Date.now()}`);
+      const users = await res.json();
+      const found = users.find(x => x.username.toLowerCase() === u.toLowerCase() && x.password === p);
+
+      if (!found) {
+        err.textContent = "Falscher Username oder Passwort.";
+        return;
+      }
+      currentUser = { username: found.username, role: found.role };
+      sessionStorage.setItem("slatesmp_user", JSON.stringify(currentUser));
+      initApp();
+    } catch {
+      err.textContent = "Fehler beim Laden von users.json.";
+    }
+  }
+
+  function logout() {
+    sessionStorage.removeItem("slatesmp_user");
+    location.reload();
+  }
+
+  async function initApp() {
+    document.getElementById("loginBox").classList.add("hidden");
+    document.getElementById("appBox").classList.remove("hidden");
+    document.getElementById("userInfo").classList.remove("hidden");
+
+    document.getElementById("displayUser").textContent = currentUser.username;
+    const roleBadge = document.getElementById("displayRole");
+    roleBadge.textContent = currentUser.role;
+    roleBadge.className = `badge ${currentUser.role}`;
+
+    if (currentUser.role === "team") {
+      document.getElementById("teamPanel").classList.remove("hidden");
+      try {
+        const rulesRes = await fetch(`rules.txt?t=${Date.now()}`);
+        serverRules = await rulesRes.text();
+      } catch {
+        serverRules = "";
+      }
+    }
+    loadReports();
+  }
+
+  function generateAndCopyPrompt() {
+    const accused = document.getElementById("accused").value.trim() || "[Unbekannt]";
+    const incident = document.getElementById("incident").value.trim();
+    if (!incident) return alert("Erst beschreiben, was passiert ist.");
+
+    const promptText = `Du bist der KI-Richter für den Minecraft-Server "SlateSMP". Bewerte den Vorfall anhand der Serverregeln und lege das Strafmaß fest.
+
+=== SERVERREGELN & STRAFMASS ===
+${serverRules.trim()}
+
+=== FALL ===
+Spieler: ${accused}
+Team: ${currentUser.username}
+Vorfall:
+${incident}`;
+
+    document.getElementById("generatedPrompt").value = promptText;
+    navigator.clipboard.writeText(promptText);
+    document.getElementById("copyStatus").textContent = "✔ Kopiert";
+  }
+
+  async function saveReport() {
+    const accused = document.getElementById("accused").value.trim();
+    const incident = document.getElementById("incident").value.trim();
+    const usedPrompt = document.getElementById("generatedPrompt").value.trim();
+    const aiResponse = document.getElementById("aiResponse").value.trim();
+    const aiModel = document.getElementById("aiModel").value.trim();
+    const proofLink = document.getElementById("proofLink").value.trim();
+    const status = document.getElementById("saveStatus");
+
+    if (!accused || !incident || !usedPrompt || !aiResponse || !aiModel) {
+      return alert("Pflichtfelder ausfüllen.");
+    }
+
+    status.style.color = "var(--muted)";
+    status.textContent = "Speichere...";
+
+    const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/reports.json`;
+    const headers = {
+      "Authorization": `Bearer ${GITHUB_TOKEN}`,
+      "Accept": "application/vnd.github+json"
+    };
+
+    try {
+      const getRes = await fetch(`${apiUrl}?ref=${GITHUB_BRANCH}`, { headers });
+      if (!getRes.ok) throw new Error("reports.json nicht ladbar (Token/Repo prüfen).");
+      const fileData = await getRes.json();
+
+      const reports = JSON.parse(decodeURIComponent(escape(atob(fileData.content.replace(/\n/g, "")))));
+      reports.unshift({
+        id: Date.now(),
+        date: new Date().toLocaleString("de-DE"),
+        author: currentUser.username,
+        accused,
+        incident,
+        prompt: usedPrompt,
+        aiModel,
+        aiResponse,
+        proofLink
+      });
+
+      const updatedContent = btoa(unescape(encodeURIComponent(JSON.stringify(reports, null, 2))));
+      const putRes = await fetch(apiUrl, {
+        method: "PUT",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `Report gegen ${accused} (${currentUser.username})`,
+          content: updatedContent,
+          sha: fileData.sha,
+          branch: GITHUB_BRANCH
+        })
+      });
+
+      if (!putRes.ok) throw new Error("Commit fehlgeschlagen.");
+
+      status.style.color = "var(--green)";
+      status.textContent = "✔ Gespeichert";
+      ["accused", "incident", "generatedPrompt", "aiResponse", "proofLink"].forEach(id => {
+        document.getElementById(id).value = "";
+      });
+      renderReports(reports);
+    } catch (e) {
+      status.style.color = "#fb7185";
+      status.textContent = "Fehler: " + e.message;
+    }
+  }
+
+  async function loadReports() {
+    try {
+      const res = await fetch(`reports.json?t=${Date.now()}`);
+      const reports = await res.json();
+      renderReports(reports);
+    } catch {
+      document.getElementById("reportsList").innerHTML = "<p>Keine Reports gefunden.</p>";
+    }
+  }
+
+  function renderReports(reports) {
+    const list = document.getElementById("reportsList");
+    if (!reports.length) {
+      list.innerHTML = "<div class='card'>Noch keine Reports.</div>";
+      return;
+    }
+    list.innerHTML = reports.map(r => `
+      <div class="card">
+        <div class="report-header">
+          <div>
+            <strong style="font-size:1.15rem; color:#fff;">Fall gegen: ${esc(r.accused)}</strong>
+            <div class="meta">${esc(r.date)} • Team: <b>${esc(r.author)}</b> • KI: <b>${esc(r.aiModel)}</b></div>
+          </div>
+          ${r.proofLink ? `<a href="${esc(r.proofLink)}" target="_blank" class="badge team">Beweisvideo</a>` : ""}
+        </div>
+        <p style="margin:8px 0;"><strong>Vorfall:</strong><br>${esc(r.incident).replace(/\n/g, "<br>")}</p>
+        <div class="verdict-box">
+          <strong>KI-Urteil (${esc(r.aiModel)}):</strong><br>
+          ${esc(r.aiResponse).replace(/\n/g, "<br>")}
+        </div>
+        <details>
+          <summary>Verwendeten Prompt anzeigen</summary>
+          <pre>${esc(r.prompt)}</pre>
+        </details>
+      </div>
+    `).join("");
+  }
+
+  function esc(s) {
+    return s ? String(s).replace(/[&<>"']/g, m => ({ '&':'&','<':'<','>':'>','"':'"',"'":''' }[m])) : "";
+  }
+</script>
+</body>
+</html>
